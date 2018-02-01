@@ -32,10 +32,19 @@ def timeSince(since, percent):
     return '%s (- %s)' % (asMinutes(s), asMinutes(rs))
 
 
-def showPlot(points):
+def savePlot(points, filename):
     plt.figure()
     fig, ax = plt.subplots()
     # this locator puts ticks at regular intervals
     loc = ticker.MultipleLocator(base=0.2)
     ax.yaxis.set_major_locator(loc)
     plt.plot(points)
+    plt.savefig(filename)
+    plt.close()
+
+
+def saveLoss(points, filename):
+  text_file = open(filename, 'a')
+  for p in points:
+    text_file.write(str(p) + ' ')
+  text_file.close()

@@ -56,16 +56,20 @@ def train(input_variable, target_variable,
   Returns: The loss.
   """
 
+  # reset optimizers.
   encoder_optimizer.zero_grad()
   decoder_optimizer.zero_grad()
   context_optimizer.zero_grad()
 
+  # get hidden vectors from encoder.
   encoder_hidden, encoder_hiddens = encoder(input_variable)
 
+  # initialize decoder input and hidden vectors.
   decoder_input = Variable(torch.LongTensor([SOS_token]))
   decoder_input = decoder_input.cuda() if use_cuda else decoder_input
   decoder_hidden = encoder_hidden
 
+  # use teacher forcing
   teacher_forcing_ratio = 1.0
   use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
 
@@ -73,9 +77,13 @@ def train(input_variable, target_variable,
   loss = 0
   target_length = target_variable.size()[0]
   for di in range(target_length):
+    # calculate context for each target output.
     ctx = context(encoder_hiddens, decoder_hidden)
+    # calculate decoder output
     decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden, ctx)
+    # calculate loss, which is a cross entropy.
     loss += criterion(decoder_output, target_variable[di])
+    # get next decoder input
     if use_teacher_forcing:
       decoder_input = target_variable[di]
     else:
@@ -86,9 +94,10 @@ def train(input_variable, target_variable,
       if ni == EOS_token:
         break
 
-  # for every sentence, update the parameters.
+  # backward propagation.
   loss.backward()
 
+  # update the parameters.
   encoder_optimizer.step()
   decoder_optimizer.step()
   context_optimizer.step()
@@ -96,7 +105,8 @@ def train(input_variable, target_variable,
   return loss.data[0] / target_length
 
 
-def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=100, learning_rate=0.01):
+def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=100, learning_rate=0.01,
+               filename='training_process'):
   """
   The main loop for training.
   Args:
@@ -107,6 +117,7 @@ def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=
     print_every: Print every print_every steps.
     plot_every: Plot every print_every steps.
     learning_rate: The learning rate.
+    filename: The file name to save figure.
 
   """
   start = time.time()
@@ -114,6 +125,7 @@ def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=
   print_loss_total = 0  # Reset every print_every
   plot_loss_total = 0  # Reset every plot_every
 
+  # instantiate optimizers
   encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
   decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
   context_optimizer = optim.SGD(context.parameters(), lr=learning_rate)
@@ -141,6 +153,7 @@ def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=
       plot_loss_avg = plot_loss_total / plot_every
       plot_losses.append(plot_loss_avg)
       plot_loss_total = 0
+      saveLoss(plot_losses, filename)
 
 
 def evaluate(encoder, decoder, context, sentence, max_length=MAX_LENGTH):
@@ -181,7 +194,16 @@ def evaluate(encoder, decoder, context, sentence, max_length=MAX_LENGTH):
   return decoded_words
 
 
-def evaluateRandomly(encoder, decoder, context, n=10):
+def evaluateRandomly(encoder, decoder, context, n=10, filename='evaluation.txt'):
+  """
+  Evaluate randomly the test set.
+  Args:
+    encoder: The encoder.
+    decoder: The decoder.
+    context: The context calculator.
+    n: The total number of evaluation.
+    filename: The file to store the evaluation.
+  """
   for i in range(n):
     pair = random.choice(pairs_test)
     print('>', pair[0])
@@ -190,15 +212,24 @@ def evaluateRandomly(encoder, decoder, context, n=10):
     output_sentence = ' '.join(output_words)
     print('<', output_sentence)
     print('')
+    text_file = open(filename, 'a')
+    text_file.write('> ' + pair[0] + '\n')
+    text_file.write('= ' + pair[1] + '\n')
+    text_file.write('< ' + output_sentence + '\n')
+    text_file.write('\n')
+    text_file.close()
 
 
 def main():
-  encoder_hidden_size = 50
-  decoder_hidden_size = 50
+  hidden_size = 50
+  encoder_hidden_size = hidden_size
+  decoder_hidden_size = hidden_size
+  encoder_embedding_dim = hidden_size
+  decoder_embedding_dim = hidden_size
   bidirectional = True
   context_size = encoder_hidden_size * 2 if bidirectional else encoder_hidden_size
-  encoder = EncoderGRU(input_lang.n_words, encoder_hidden_size, encoder_hidden_size, bidirectional=bidirectional)
-  decoder = DecoderGRU(output_lang.n_words, decoder_hidden_size, decoder_hidden_size, context_size=context_size)
+  encoder = EncoderGRU(input_lang.n_words, encoder_embedding_dim, encoder_hidden_size, bidirectional=bidirectional)
+  decoder = DecoderGRU(output_lang.n_words, decoder_embedding_dim, decoder_hidden_size, context_size=context_size)
   context = ContextInnerProd(context_size, decoder_hidden_size)
 
   if use_cuda:
@@ -206,8 +237,10 @@ def main():
     decoder = decoder.cuda()
     context = context.cuda()
 
-  trainIters(encoder, decoder, context, n_iters=10000, print_every=100, learning_rate=0.01)
-  evaluateRandomly(encoder, decoder, context)
+  trainIters(encoder, decoder, context, n_iters=10000, print_every=100, plot_every=100, learning_rate=0.01,
+             filename='bi' + str(bidirectional) + '_hidden' + str(hidden_size) + '_maxlen' + str(MAX_LENGTH) + '.txt')
+
+  evaluateRandomly(encoder, decoder, context, filename='evaluation.txt')
 
 
 if __name__ == '__main__':

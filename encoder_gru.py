@@ -1,11 +1,9 @@
 import torch.nn as nn
 from torch.autograd import Variable
-
+from prepare_data import *
 import torch
 use_cuda = torch.cuda.is_available()
 
-SOS_token = 0
-EOS_token = 1
 
 """
 A simple uni-directional RNN Encoder for neural machine translation using GRU cell.

@@ -8,7 +8,7 @@ import random
 SOS_token = 0  # the start of sentence token.
 EOS_token = 1  # the end of sentence token.
 
-MAX_LENGTH = 10  # only sentence shorter than MAX_LENGTH we select to train.
+MAX_LENGTH = 30  # only sentence shorter than MAX_LENGTH we select to train.
 
 # only sentence with these prefix we select to train.
 eng_prefixes = (
