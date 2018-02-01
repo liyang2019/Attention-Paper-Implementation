@@ -31,7 +31,7 @@ class TestTrain(unittest.TestCase):
       decoder = decoder.cuda()
       context = context.cuda()
 
-    trainIters(encoder, decoder, context, n_iters=10000, print_every=50)
+    trainIters(encoder, decoder, context, n_iters=10000, print_every=100, learning_rate=0.01)
     evaluateRandomly(encoder, decoder, context)
 
 
@@ -114,7 +114,7 @@ def train(input_variable, target_variable,
   return loss.data[0] / target_length
 
 
-def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=100, learning_rate=0.001):
+def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=100, learning_rate=0.01):
   """
   The main loop for training.
   Args:
@@ -189,13 +189,14 @@ def evaluate(encoder, decoder, context, sentence, max_length=MAX_LENGTH):
     topv, topi = decoder_output.data.topk(1)
     ni = topi[0][0]
     if ni == EOS_token:
+      print('yes')
       decoded_words.append('<EOS>')
       break
     else:
       decoded_words.append(output_lang.index2word[ni])
-    decoder_input = Variable(torch.LongTensor([[ni]]))
+    decoder_input = Variable(torch.LongTensor([ni]))
     decoder_input = decoder_input.cuda() if use_cuda else decoder_input
-    return decoded_words
+  return decoded_words
 
 
 def evaluateRandomly(encoder, decoder, context, n=10):

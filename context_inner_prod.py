@@ -15,7 +15,7 @@ class ContextInnerProd(nn.Module):
     super(ContextInnerProd, self).__init__()
     self.encoder_hidden_size = encoder_hidden_size
     self.decoder_hidden_size = decoder_hidden_size
-    self.W = nn.Parameter(torch.FloatTensor(encoder_hidden_size, decoder_hidden_size))
+    self.W = nn.Parameter(torch.FloatTensor(torch.randn(encoder_hidden_size, decoder_hidden_size) * 0.01))
 
   def forward(self, encoder_hiddens, decoder_hidden):
     """
