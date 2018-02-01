@@ -1,6 +1,5 @@
 import torch.nn as nn
 from torch.autograd import Variable
-
 import torch
 use_cuda = torch.cuda.is_available()
 
@@ -57,7 +56,5 @@ class DecoderGRU(nn.Module):
 
   def initHidden(self):
     result = Variable(torch.zeros(1, self.hidden_size))
-    if use_cuda:
-      return result.cuda()
-    else:
-      return result
+    result = result.cuda() if use_cuda else result
+    return result

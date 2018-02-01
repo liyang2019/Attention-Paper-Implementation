@@ -50,14 +50,16 @@ class EncoderGRU(nn.Module):
     embedded = self.embedding(input)
     # the length of the input sentence
     seq_len = input.size()[0]
-    sos = self.embedding(Variable(torch.LongTensor([SOS_token])))
-    hidden = self.gru_cell(sos, self.hidden_initial[0])
+    sos = Variable(torch.LongTensor([SOS_token]))
+    sos = sos.cuda() if use_cuda else sos
+    hidden = self.gru_cell(self.embedding(sos), self.hidden_initial[0])
     for w in range(seq_len):
       hidden = self.gru_cell(embedded[w], hidden)
       hiddens.append(hidden)
     if self.bidirectional:
-      eos = self.embedding(Variable(torch.LongTensor([EOS_token])))
-      hidden = self.gru_cell(eos, self.hidden_initial[1])
+      eos = Variable(torch.LongTensor([EOS_token]))
+      eos = eos.cuda() if use_cuda else eos
+      hidden = self.gru_cell(self.embedding(eos), self.hidden_initial[1])
       for w in reversed(range(seq_len)):
         hidden = self.gru_cell(embedded[w], hidden)
         hiddens[w] = torch.cat([hiddens[w], hidden], dim=-1)
@@ -72,7 +74,6 @@ class EncoderGRU(nn.Module):
     hidden = []
     for i in range(num_directions):
       hid = Variable(torch.zeros(1, self.hidden_size))
-      if use_cuda:
-        hid = hid.cuda()
+      hid = hid.cuda() if use_cuda else hid
       hidden.append(hid)
     return hidden
