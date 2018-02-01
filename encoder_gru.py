@@ -9,7 +9,7 @@ EOS_token = 1
 
 """
 A simple uni-directional RNN Encoder for neural machine translation using GRU cell.
-From http://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
+Project structure referenced from http://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
 """
 
 
@@ -36,7 +36,6 @@ class EncoderGRU(nn.Module):
     else:
       self.num_directions = 1
     self.embedding = nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
-    # self.gru = nn.GRU(input_size=embedding_dim, hidden_size=hidden_size, bidirectional=bidirectional)
     self.gru_cell = nn.GRUCell(input_size=embedding_dim, hidden_size=hidden_size)
     self.hidden = self.init_hidden(self.num_directions)
     self.hidden_cache = []

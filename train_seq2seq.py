@@ -5,7 +5,7 @@ from utils import *
 import torch.nn as nn
 from torch import optim
 from encoder_gru import EncoderGRU
-from decoder import DecoderRNN
+from decoder_gru import DecoderGRU
 
 
 use_cuda = torch.cuda.is_available()
@@ -166,7 +166,7 @@ def evaluateRandomly(encoder, decoder, n=10):
 
 hidden_size = 100
 encoder1 = EncoderGRU(input_lang.n_words, hidden_size)
-decoder1 = DecoderRNN(hidden_size, output_lang.n_words)
+decoder1 = DecoderGRU(hidden_size, output_lang.n_words)
 
 
 if use_cuda:
