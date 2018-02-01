@@ -7,6 +7,7 @@ import torch
 
 use_cuda = torch.cuda.is_available()
 
+
 class AttnDecoderRNN(nn.Module):
   def __init__(self, hidden_size, output_size, dropout_p=0.1, max_length=MAX_LENGTH):
     super(AttnDecoderRNN, self).__init__()

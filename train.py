@@ -4,7 +4,7 @@ import torch
 from utils import *
 import torch.nn as nn
 from torch import optim
-from encoder_gru import EncoderRNN
+from encoder_gru import EncoderGRU
 from attn_decoder import AttnDecoderRNN
 
 
@@ -37,7 +37,7 @@ teacher_forcing_ratio = 0.5
 
 
 def train(input_variable, target_variable, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion, max_length=MAX_LENGTH):
-    encoder_hidden = encoder.initHidden()
+    encoder_hidden = encoder.init_hidden()
 
     encoder_optimizer.zero_grad()
     decoder_optimizer.zero_grad()
@@ -128,7 +128,7 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
 def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
   input_variable = variableFromSentence(input_lang, sentence)
   input_length = input_variable.size()[0]
-  encoder_hidden = encoder.initHidden()
+  encoder_hidden = encoder.init_hidden()
 
   encoder_outputs = Variable(torch.zeros(max_length, encoder.hidden_size))
   encoder_outputs = encoder_outputs.cuda() if use_cuda else encoder_outputs
@@ -175,7 +175,7 @@ def evaluateRandomly(encoder, decoder, n=10):
 
 
 hidden_size = 10
-encoder1 = EncoderRNN(input_lang.n_words, hidden_size)
+encoder1 = EncoderGRU(input_lang.n_words, hidden_size)
 attn_decoder1 = AttnDecoderRNN(hidden_size, output_lang.n_words, dropout_p=0.1)
 
 
