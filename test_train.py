@@ -20,19 +20,19 @@ class TestTrain(unittest.TestCase):
   def test_train_without_attention(self):
     encoder_hidden_size = 50
     decoder_hidden_size = 50
-    context_size = encoder_hidden_size * 2
-    encoder = EncoderGRU(input_lang.n_words, encoder_hidden_size, encoder_hidden_size,
-                         num_layers=1, bidirectional=True)
-    decoder = DecoderGRU(output_lang.n_words, decoder_hidden_size, decoder_hidden_size,
-                         num_layers=1, context_size=context_size)
-    context = ContextInnerProd(encoder_hidden_size, decoder_hidden_size)
+    bidirectional = True
+    context_size = encoder_hidden_size * 2 if bidirectional else encoder_hidden_size
+    encoder = EncoderGRU(input_lang.n_words, encoder_hidden_size, encoder_hidden_size, bidirectional=bidirectional)
+    decoder = DecoderGRU(output_lang.n_words, decoder_hidden_size, decoder_hidden_size, context_size=context_size)
+    context = ContextInnerProd(context_size, decoder_hidden_size)
 
     if use_cuda:
       encoder = encoder.cuda()
       decoder = decoder.cuda()
       context = context.cuda()
 
-    trainIters(encoder, decoder, context, n_iters=75000, print_every=1)
+    trainIters(encoder, decoder, context, n_iters=10000, print_every=50)
+    evaluateRandomly(encoder, decoder, context)
 
 
 def indexesFromSentence(lang, sentence):
@@ -57,7 +57,7 @@ def variablesFromPair(pair):
 
 def train(input_variable, target_variable,
           encoder, decoder, context, encoder_optimizer, decoder_optimizer, context_optimizer,
-          criterion, max_length=MAX_LENGTH):
+          criterion):
   """
   A train step for one sample(a sentence to sentence translation pair)
   Args:
@@ -70,31 +70,25 @@ def train(input_variable, target_variable,
     decoder_optimizer: The decoder optimizer.
     context_optimizer: The context calculator optimizer.
     criterion: The criterion.
-    max_length: The max_length of a sentence.
 
   Returns: The loss.
-
   """
 
   encoder_optimizer.zero_grad()
   decoder_optimizer.zero_grad()
   context_optimizer.zero_grad()
 
-  encoder_outputs = Variable(torch.zeros(max_length, encoder.hidden_size))
-  encoder_outputs = encoder_outputs.cuda() if use_cuda else encoder_outputs
-
   encoder_hidden, encoder_hiddens = encoder(input_variable)
-
-  loss = 0
 
   decoder_input = Variable(torch.LongTensor([SOS_token]))
   decoder_input = decoder_input.cuda() if use_cuda else decoder_input
-
   decoder_hidden = encoder_hidden
 
   teacher_forcing_ratio = 1.0
   use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
 
+  # start to train
+  loss = 0
   target_length = target_variable.size()[0]
   for di in range(target_length):
     ctx = context(encoder_hiddens, decoder_hidden)
@@ -104,9 +98,13 @@ def train(input_variable, target_variable,
       decoder_input = target_variable[di]
     else:
       topv, topi = decoder_output.data.topk(1)
-      decoder_input = Variable(torch.LongTensor([[topi[0][0]]]))
+      ni = topi[0][0]
+      decoder_input = Variable(torch.LongTensor([[ni]]))
       decoder_input = decoder_input.cuda() if use_cuda else decoder_input
+      if ni == EOS_token:
+        break
 
+  # for every sentence, update the parameters.
   loss.backward()
 
   encoder_optimizer.step()
@@ -116,7 +114,7 @@ def train(input_variable, target_variable,
   return loss.data[0] / target_length
 
 
-def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=100, learning_rate=0.01):
+def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=100, learning_rate=0.001):
   """
   The main loop for training.
   Args:
@@ -146,8 +144,7 @@ def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=
     target_variable = training_pair[1]
 
     loss = train(input_variable, target_variable,
-                 encoder, decoder, context,
-                 encoder_optimizer, decoder_optimizer, context_optimizer,
+                 encoder, decoder, context, encoder_optimizer, decoder_optimizer, context_optimizer,
                  criterion)
 
     print_loss_total += loss
@@ -162,3 +159,51 @@ def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=
       plot_loss_avg = plot_loss_total / plot_every
       plot_losses.append(plot_loss_avg)
       plot_loss_total = 0
+
+
+def evaluate(encoder, decoder, context, sentence, max_length=MAX_LENGTH):
+  """
+  Evaluate the model, given a sentence, translate into target language.
+  Args:
+    encoder: The encoder.
+    decoder: The decoder.
+    context: The context calculator.
+    sentence: The sentence of the source language.
+    max_length: The max length of the target language.
+
+  Returns:
+
+  """
+  input_variable = variableFromSentence(input_lang, sentence)
+
+  encoder_hidden, encoder_hiddens = encoder(input_variable)
+
+  decoder_input = Variable(torch.LongTensor([SOS_token]))
+  decoder_input = decoder_input.cuda() if use_cuda else decoder_input
+  decoder_hidden = encoder_hidden
+
+  decoded_words = []
+  for di in range(max_length):
+    ctx = context(encoder_hiddens, decoder_hidden)
+    decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden, ctx)
+    topv, topi = decoder_output.data.topk(1)
+    ni = topi[0][0]
+    if ni == EOS_token:
+      decoded_words.append('<EOS>')
+      break
+    else:
+      decoded_words.append(output_lang.index2word[ni])
+    decoder_input = Variable(torch.LongTensor([[ni]]))
+    decoder_input = decoder_input.cuda() if use_cuda else decoder_input
+    return decoded_words
+
+
+def evaluateRandomly(encoder, decoder, context, n=10):
+  for i in range(n):
+    pair = random.choice(pairs)
+    print('>', pair[0])
+    print('=', pair[1])
+    output_words = evaluate(encoder, decoder, context, pair[0])
+    output_sentence = ' '.join(output_words)
+    print('<', output_sentence)
+    print('')

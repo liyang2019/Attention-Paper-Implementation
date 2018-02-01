@@ -15,7 +15,7 @@ class ContextInnerProd(nn.Module):
     super(ContextInnerProd, self).__init__()
     self.encoder_hidden_size = encoder_hidden_size
     self.decoder_hidden_size = decoder_hidden_size
-    self.W = nn.Parameter(torch.randn(encoder_hidden_size * 2, decoder_hidden_size))
+    self.W = nn.Parameter(torch.FloatTensor(encoder_hidden_size, decoder_hidden_size))
 
   def forward(self, encoder_hiddens, decoder_hidden):
     """
@@ -36,7 +36,7 @@ class ContextInnerProd(nn.Module):
       weights.append(alignment)
     for i in range(seq_len):
       weights[i] /= normalizer
-    context = Variable(torch.zeros([1, self.encoder_hidden_size * 2]))
+    context = Variable(torch.zeros([1, self.encoder_hidden_size]))
     context = context.cuda() if use_cuda else context
     for i in range(seq_len):
       context += weights[i] * encoder_hiddens[i]

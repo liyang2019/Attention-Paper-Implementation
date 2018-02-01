@@ -14,7 +14,7 @@ Project structure referenced from http://pytorch.org/tutorials/intermediate/seq2
 
 
 class EncoderGRU(nn.Module):
-  def __init__(self, num_embeddings, embedding_dim, hidden_size, num_layers=1, bidirectional=True):
+  def __init__(self, num_embeddings, embedding_dim, hidden_size, bidirectional=True):
     """
     Initialization of the simple uni-directional RNN encoder. The input of this module is
     a word vector, and then translated to word embedding, and then input into the GRU cell.
@@ -23,13 +23,11 @@ class EncoderGRU(nn.Module):
       num_embeddings: number of words that needed to be embedded into a vector.
       embedding_dim: The embedding dimension for each word, i.e. the input size for the RNN cell.
       hidden_size: The hidden unit size.
-      num_layers: number of layers.
       bidirectional: True if is a bidirectional RNN.
     """
     super(EncoderGRU, self).__init__()
     self.embedding_dim = embedding_dim
     self.hidden_size = hidden_size
-    self.num_layers = num_layers
     self.bidirectional = bidirectional
     if bidirectional:
       self.num_directions = 2

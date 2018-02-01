@@ -11,7 +11,7 @@ Project structure referenced from http://pytorch.org/tutorials/intermediate/seq2
 
 
 class DecoderGRU(nn.Module):
-  def __init__(self, num_embeddings, embedding_dim, hidden_size, num_layers=1, context_size=None):
+  def __init__(self, num_embeddings, embedding_dim, hidden_size, context_size=None):
     """
     Initialization of the simple RNN encoder. The input of this module is
     a word vector, and then translated to word embedding, and then input into the GRU cell
@@ -21,13 +21,11 @@ class DecoderGRU(nn.Module):
       num_embeddings: number of words that needed to be embedded into a vector.
       embedding_dim: The embedding dimension for each word, i.e. the input size for the RNN cell.
       hidden_size: The hidden unit size.
-      num_layers: number of layers.
       context_size: The size of the context vector.
     """
     super(DecoderGRU, self).__init__()
     self.embedding_dim = embedding_dim
     self.hidden_size = hidden_size
-    self.num_layers = num_layers
     self.context_size = context_size
     if context_size is not None:
       self.input_size = embedding_dim + context_size
