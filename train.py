@@ -13,6 +13,7 @@ use_cuda = torch.cuda.is_available()
 input_lang, output_lang, pairs = prepareData('eng', 'fra', True)
 print(random.choice(pairs))
 
+
 def indexesFromSentence(lang, sentence):
   return [lang.word2index[word] for word in sentence.split(' ')]
 

@@ -14,7 +14,7 @@ Project structure referenced from http://pytorch.org/tutorials/intermediate/seq2
 
 
 class EncoderGRU(nn.Module):
-  def __init__(self, num_embeddings, embedding_dim, hidden_size, num_layers, bidirectional=True):
+  def __init__(self, num_embeddings, embedding_dim, hidden_size, num_layers=1, bidirectional=True):
     """
     Initialization of the simple uni-directional RNN encoder. The input of this module is
     a word vector, and then translated to word embedding, and then input into the GRU cell.
@@ -37,8 +37,7 @@ class EncoderGRU(nn.Module):
       self.num_directions = 1
     self.embedding = nn.Embedding(num_embeddings=num_embeddings, embedding_dim=embedding_dim)
     self.gru_cell = nn.GRUCell(input_size=embedding_dim, hidden_size=hidden_size)
-    self.hidden = self.init_hidden(self.num_directions)
-    self.hidden_cache = []
+    self.hidden_initial = self.init_hidden(self.num_directions)
 
   def forward(self, input):
     """
@@ -48,22 +47,23 @@ class EncoderGRU(nn.Module):
 
     Returns: last hidden output, cached hidden outputs.
     """
+    hiddens = []
     # all the embeddings of a input sentence
     embedded = self.embedding(input)
     # the length of the input sentence
     seq_len = input.size()[0]
     sos = self.embedding(Variable(torch.LongTensor([SOS_token])))
-    hid = self.gru_cell(sos, self.hidden[0])
+    hidden = self.gru_cell(sos, self.hidden_initial[0])
     for w in range(seq_len):
-      hid = self.gru_cell(embedded[w], hid)
-      self.hidden_cache.append(hid)
+      hidden = self.gru_cell(embedded[w], hidden)
+      hiddens.append(hidden)
     if self.bidirectional:
       eos = self.embedding(Variable(torch.LongTensor([EOS_token])))
-      hid = self.gru_cell(eos, self.hidden[1])
+      hidden = self.gru_cell(eos, self.hidden_initial[1])
       for w in reversed(range(seq_len)):
-        hid = self.gru_cell(embedded[w], hid)
-        self.hidden_cache[w] = torch.cat([self.hidden_cache[w], hid], dim=-1)
-    return hid, self.hidden_cache
+        hidden = self.gru_cell(embedded[w], hidden)
+        hiddens[w] = torch.cat([hiddens[w], hidden], dim=-1)
+    return hidden, hiddens
 
   def init_hidden(self, num_directions):
     """

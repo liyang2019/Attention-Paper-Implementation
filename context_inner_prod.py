@@ -1,21 +1,21 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+use_cuda = torch.cuda.is_available()
 
 
 class ContextInnerProd(nn.Module):
-  def __init__(self, encoder_hidden_size, decoder_hidden_size, context_size):
+  def __init__(self, encoder_hidden_size, decoder_hidden_size):
     """
     Initialize the inner product context calculator.
     Args:
       encoder_hidden_size: The hidden vector size of the encoder.
       decoder_hidden_size: The hidden vector size of the decoder.
-      context_size: The context vector size.
     """
     super(ContextInnerProd, self).__init__()
     self.encoder_hidden_size = encoder_hidden_size
     self.decoder_hidden_size = decoder_hidden_size
-    self.context_size = context_size
+    self.W = nn.Parameter(torch.randn(encoder_hidden_size * 2, decoder_hidden_size))
 
   def forward(self, encoder_hiddens, decoder_hidden):
     """
@@ -31,12 +31,13 @@ class ContextInnerProd(nn.Module):
     weights = []
     normalizer = 0.0
     for i in range(seq_len):
-      alignment = torch.exp(torch.sum(encoder_hiddens[i] * decoder_hidden))
+      alignment = torch.exp(torch.mm(torch.mm(encoder_hiddens[i], self.W), torch.t(decoder_hidden)))
       normalizer += alignment
       weights.append(alignment)
     for i in range(seq_len):
       weights[i] /= normalizer
-    context = Variable(torch.zeros([1, self.encoder_hidden_size]))
+    context = Variable(torch.zeros([1, self.encoder_hidden_size * 2]))
+    context = context.cuda() if use_cuda else context
     for i in range(seq_len):
       context += weights[i] * encoder_hiddens[i]
     return context

@@ -11,7 +11,7 @@ Project structure referenced from http://pytorch.org/tutorials/intermediate/seq2
 
 
 class DecoderGRU(nn.Module):
-  def __init__(self, num_embeddings, embedding_dim, hidden_size, num_layers, context_size=None):
+  def __init__(self, num_embeddings, embedding_dim, hidden_size, num_layers=1, context_size=None):
     """
     Initialization of the simple RNN encoder. The input of this module is
     a word vector, and then translated to word embedding, and then input into the GRU cell
@@ -42,14 +42,14 @@ class DecoderGRU(nn.Module):
     """
     Override the forward method of the nn.Module.
     Args:
-      input: The input vector, which is of size (1, 1) for a word.
+      input: The input vector, which is of size (1) for a word.
       hidden: The initial hidden vector, which is of size (1, hidden_size)
       context: The context vector, which is of size (1, context_size) for a word., and could be None.
 
     Returns: The output vector, The hidden vector
     Where the output vector is the probability of each word in the dictionary for the current prediction.
     """
-    embedded = self.embedding(input)[0]  # the embedding of a word, which is of size (1, embedding_dim)
+    embedded = self.embedding(input)  # the embedding of a word, which is of size (1, embedding_dim)
     # embedded = F.relu(embedded) # ??
     if context is not None:
       embedded = torch.cat([embedded, context], dim=-1)
