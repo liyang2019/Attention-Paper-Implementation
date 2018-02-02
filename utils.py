@@ -39,7 +39,7 @@ def plotLoss(filename, figurename):
   for i in range(len(strs) - 1):
     points.append(float(strs[i]))
   plt.figure()
-  plt.plot(points[-100:])
+  plt.plot(points[-1000:])
   plt.savefig(figurename)
   plt.close()
 
