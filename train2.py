@@ -202,7 +202,7 @@ def evaluate(encoder, decoder, context, sentence, max_length=MAX_LENGTH):
 
 def evaluateRandomly(encoder, decoder, context, n=10, filename='evaluation.txt'):
   """
-  Evaluate randomly the test set.
+  Evaluate randomly the unitest set.
   Args:
     encoder: The encoder.
     decoder: The decoder.
