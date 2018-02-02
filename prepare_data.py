@@ -15,6 +15,7 @@ UNK_token = 2  # the unknown wod token.
 
 MAX_LENGTH = 10  # only sentence shorter than MAX_LENGTH we select to train.
 MAX_TRAIN = 2000  # max number of training examples.
+MAX_WORDS = 2000  # max number of words.
 print('MAX_LENGTH', MAX_LENGTH)
 
 # only sentence with these prefix we select to train.
@@ -38,11 +39,11 @@ class Lang:
     self.index2word = {0: "SOS", 1: "EOS", 2: "UNK"}
     self.n_words = 3  # Count SOS and EOS
 
-  def addSentence(self, sentence):
+  def add_sentence(self, sentence):
     for word in sentence.split(' '):
-        self.addWord(word)
+        self.add_word(word)
 
-  def addWord(self, word):
+  def add_word(self, word):
     if word not in self.word2index:
         self.word2index[word] = self.n_words
         self.word2count[word] = 1
@@ -111,8 +112,8 @@ def readLangs(lang1_train, lang1_test, lang2_train, lang2_test):
   # only use the training set to input the language statistics.
   print("Counting words...")
   for pair in pairs_train:
-    input_lang.addSentence(pair[0])
-    output_lang.addSentence(pair[1])
+    input_lang.add_sentence(pair[0])
+    output_lang.add_sentence(pair[1])
   print("Counted words:")
   print('input   ' + lang1_train, input_lang.n_words)
   print('output  ' + lang2_train, output_lang.n_words)

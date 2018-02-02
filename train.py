@@ -243,7 +243,7 @@ def main():
   # fileloc = './'
 
   trainIters(encoder, decoder, context, pairs_train, input_lang, output_lang,
-             n_iters=10000, print_every=100, plot_every=100, learning_rate=0.01,
+             n_iters=100000, print_every=100, plot_every=100, learning_rate=0.01,
              filename=fileloc +
              'bi' + str(bidirectional) +
              '_hidden' + str(hidden_size) +
