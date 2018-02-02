@@ -7,8 +7,9 @@ import random
 
 SOS_token = 0  # the start of sentence token.
 EOS_token = 1  # the end of sentence token.
+UNK_token = 2  # the unknown wod token.
 
-MAX_LENGTH = 30  # only sentence shorter than MAX_LENGTH we select to train.
+MAX_LENGTH = 10  # only sentence shorter than MAX_LENGTH we select to train.
 
 # only sentence with these prefix we select to train.
 eng_prefixes = (
@@ -28,8 +29,8 @@ class Lang:
     """
     self.word2index = {}
     self.word2count = {}
-    self.index2word = {0: "SOS", 1: "EOS"}
-    self.n_words = 2  # Count SOS and EOS
+    self.index2word = {0: "SOS", 1: "EOS", 2: "UNK"}
+    self.n_words = 3  # Count SOS and EOS
 
   def addSentence(self, sentence):
     for word in sentence.split(' '):

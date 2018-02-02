@@ -43,24 +43,27 @@ class EncoderGRU(nn.Module):
 
     Returns: last hidden output, cached hidden outputs.
     """
-    hiddens = []
-    # all the embeddings of a input sentence
-    embedded = self.embedding(input)
     # the length of the input sentence
     seq_len = input.size()[0]
+    # the cached hidden vectors, which is of size (seq_len, hidden_size * num_directions)
+    hiddens = Variable(torch.zeros(seq_len, self.hidden_size * self.num_directions))
+    hiddens = hiddens.cuda() if use_cuda else hiddens
+
+    # all the embeddings of a input sentence
+    embedded = self.embedding(input)
     sos = Variable(torch.LongTensor([SOS_token]))
     sos = sos.cuda() if use_cuda else sos
     hidden = self.gru_cell(self.embedding(sos), self.hidden_initial[0])
     for w in range(seq_len):
       hidden = self.gru_cell(embedded[w], hidden)
-      hiddens.append(hidden)
+      hiddens[w, :self.hidden_size] = hidden
     if self.bidirectional:
       eos = Variable(torch.LongTensor([EOS_token]))
       eos = eos.cuda() if use_cuda else eos
       hidden = self.gru_cell(self.embedding(eos), self.hidden_initial[1])
       for w in reversed(range(seq_len)):
         hidden = self.gru_cell(embedded[w], hidden)
-        hiddens[w] = torch.cat([hiddens[w], hidden], dim=-1)
+        hiddens[w, self.hidden_size:] = hidden
     return hidden, hiddens
 
   def init_hidden(self, num_directions):

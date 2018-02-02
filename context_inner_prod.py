@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 use_cuda = torch.cuda.is_available()
 
 
@@ -9,35 +8,26 @@ class ContextInnerProd(nn.Module):
     """
     Initialize the inner product context calculator.
     Args:
-      encoder_hidden_size: The hidden vector size of the encoder.
+      encoder_hidden_size: The cached hidden vector size of the encoder.
       decoder_hidden_size: The hidden vector size of the decoder.
     """
     super(ContextInnerProd, self).__init__()
     self.encoder_hidden_size = encoder_hidden_size
     self.decoder_hidden_size = decoder_hidden_size
     self.W = nn.Parameter(torch.FloatTensor(torch.randn(encoder_hidden_size, decoder_hidden_size) * 0.01))
+    self.softmax = nn.Softmax(dim=0)
 
   def forward(self, encoder_hiddens, decoder_hidden):
     """
     Override the forward method of the nn.Module.
     Args:
-      encoder_hiddens: A list of cached hidden vectors from the RNN encoder.
+      encoder_hiddens: the encoder cached hidden vectors, which is of size (seq_len, encoder_hidden_size)
       decoder_hidden: The previous hidden vector from the RNN decoder.
 
     Returns: The context vector.
 
     """
-    seq_len = len(encoder_hiddens)
-    weights = []
-    normalizer = 0.0
-    for i in range(seq_len):
-      alignment = torch.exp(torch.mm(torch.mm(encoder_hiddens[i], self.W), torch.t(decoder_hidden)))
-      normalizer += alignment
-      weights.append(alignment)
-    for i in range(seq_len):
-      weights[i] /= normalizer
-    context = Variable(torch.zeros([1, self.encoder_hidden_size]))
-    context = context.cuda() if use_cuda else context
-    for i in range(seq_len):
-      context += weights[i] * encoder_hiddens[i]
+    inner_prod = torch.mm(torch.mm(encoder_hiddens, self.W), torch.t(decoder_hidden))  # (seq_len, 1)
+    weights = self.softmax(inner_prod)  # (seq_len, 1)
+    context = torch.mm(torch.t(weights), encoder_hiddens)
     return context

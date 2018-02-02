@@ -20,7 +20,13 @@ print(random.choice(pairs_train))
 
 
 def indexesFromSentence(lang, sentence):
-  return [lang.word2index[word] for word in sentence.split(' ')]
+  indexes = []
+  for word in sentence.split(' '):
+    if word in lang.word2index:
+      indexes.append(lang.word2index[word])
+    else:
+      indexes.append(UNK_token)
+  return indexes
 
 
 def variableFromSentence(lang, sentence):
@@ -237,10 +243,13 @@ def main():
     decoder = decoder.cuda()
     context = context.cuda()
 
-  trainIters(encoder, decoder, context, n_iters=10000, print_every=100, plot_every=100, learning_rate=0.01,
-             filename='bi' + str(bidirectional) + '_hidden' + str(hidden_size) + '_maxlen' + str(MAX_LENGTH) + '.txt')
+  # fileloc = '/output/'
+  fileloc = './'
 
-  evaluateRandomly(encoder, decoder, context, filename='evaluation.txt')
+  trainIters(encoder, decoder, context, n_iters=100000, print_every=100, plot_every=100, learning_rate=0.001,
+             filename=fileloc + 'bi' + str(bidirectional) + '_hidden' + str(hidden_size) + '_maxlen' + str(MAX_LENGTH) + '.txt')
+
+  evaluateRandomly(encoder, decoder, context, filename=fileloc + 'evaluation.txt')
 
 
 if __name__ == '__main__':
