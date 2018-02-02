@@ -52,7 +52,7 @@ def saveLoss(points, filename):
 
 
 def main():
-  plotLoss('biTrue_hidden50_maxlen10.txt', 'biTrue_hidden50_maxlen10.png')
+  plotLoss('biTrue_hidden50_maxlen30.txt', 'biTrue_hidden50_maxlen30.png')
 
 
 if __name__ == '__main__':
