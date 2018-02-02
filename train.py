@@ -1,4 +1,3 @@
-from torch.autograd import Variable
 from prepare_data import *
 import torch
 from utils import *
@@ -7,45 +6,12 @@ from torch import optim
 from encoder_gru import EncoderGRU
 from decoder_gru import DecoderGRU
 from context_inner_prod import ContextInnerProd
-
 use_cuda = torch.cuda.is_available()
-
-input_lang, output_lang, pairs_train, pairs_test = readLangs(
-  'data/en-vi/train.vi.txt',
-  'data/en-vi/tst2012.vi.txt',
-  'data/en-vi/train.en.txt',
-  'data/en-vi/tst2012.en.txt',
-)
-print(random.choice(pairs_train))
-
-
-def indexesFromSentence(lang, sentence):
-  indexes = []
-  for word in sentence.split(' '):
-    if word in lang.word2index:
-      indexes.append(lang.word2index[word])
-    else:
-      indexes.append(UNK_token)
-  return indexes
-
-
-def variableFromSentence(lang, sentence):
-  indexes = indexesFromSentence(lang, sentence)
-  # indexes.append(EOS_token)
-  result = Variable(torch.LongTensor(indexes).view(-1, 1))
-  result = result.cuda() if use_cuda else result
-  return result
-
-
-def variablesFromPair(pair):
-  input_variable = variableFromSentence(input_lang, pair[0])
-  target_variable = variableFromSentence(output_lang, pair[1])
-  return input_variable, target_variable
 
 
 def train(input_variable, target_variable,
           encoder, decoder, context, encoder_optimizer, decoder_optimizer, context_optimizer,
-          criterion):
+          criterion, use_attn=True):
   """
   A train step for one sample(a sentence to sentence translation pair)
   Args:
@@ -58,6 +24,7 @@ def train(input_variable, target_variable,
     decoder_optimizer: The decoder optimizer.
     context_optimizer: The context calculator optimizer.
     criterion: The criterion.
+    use_attn: True if using attention.
 
   Returns: The loss.
   """
@@ -83,10 +50,14 @@ def train(input_variable, target_variable,
   loss = 0
   target_length = target_variable.size()[0]
   for di in range(target_length):
-    # calculate context for each target output.
-    ctx = context(encoder_hiddens, decoder_hidden)
-    # calculate decoder output
-    decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden, ctx)
+    if use_attn:
+      # calculate context for each target output.
+      ctx = context(encoder_hiddens, decoder_hidden)
+      # calculate decoder output
+      decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden, ctx)
+    else:
+      # calculate decoder output
+      decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden)
     # calculate loss, which is a cross entropy.
     loss += criterion(decoder_output, target_variable[di])
     # get next decoder input
@@ -111,19 +82,23 @@ def train(input_variable, target_variable,
   return loss.data[0] / target_length
 
 
-def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=100, learning_rate=0.01,
-               filename='training_process'):
+def trainIters(encoder, decoder, context, pairs_train, input_lang, output_lang, n_iters,
+               print_every=1000, plot_every=100, learning_rate=0.01, filename='training_process', use_attn=True):
   """
   The main loop for training.
   Args:
     encoder: The RNN encoder.
     decoder: The RNN decoder.
     context: The context calculator.
+    pairs_train: The training sentence pairs.
+    input_lang: The input language.
+    output_lang: The output language.
     n_iters: The total number of training steps.
     print_every: Print every print_every steps.
     plot_every: Plot every print_every steps.
     learning_rate: The learning rate.
     filename: The file name to save figure.
+    use_attn: True if using attention.
 
   """
   start = time.time()
@@ -135,7 +110,7 @@ def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=
   encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
   decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
   context_optimizer = optim.SGD(context.parameters(), lr=learning_rate)
-  training_pairs = [variablesFromPair(random.choice(pairs_train)) for _ in range(n_iters)]
+  training_pairs = [variablesFromPair(input_lang, output_lang, random.choice(pairs_train)) for _ in range(n_iters)]
   criterion = nn.NLLLoss()
 
   for iter in range(1, n_iters + 1):
@@ -145,7 +120,7 @@ def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=
 
     loss = train(input_variable, target_variable,
                  encoder, decoder, context, encoder_optimizer, decoder_optimizer, context_optimizer,
-                 criterion)
+                 criterion, use_attn)
 
     print_loss_total += loss
     plot_loss_total += loss
@@ -162,7 +137,7 @@ def trainIters(encoder, decoder, context, n_iters, print_every=1000, plot_every=
       saveLoss(plot_losses, filename)
 
 
-def evaluate(encoder, decoder, context, sentence, max_length=MAX_LENGTH):
+def evaluate(encoder, decoder, context, sentence, input_lang, output_lang, max_length=MAX_LENGTH, use_attn=True):
   """
   Evaluate the model, given a sentence, translate into target language.
   Args:
@@ -170,7 +145,10 @@ def evaluate(encoder, decoder, context, sentence, max_length=MAX_LENGTH):
     decoder: The decoder.
     context: The context calculator.
     sentence: The sentence of the source language.
+    input_lang: The input language.
+    output_lang: The output language.
     max_length: The max length of the target language.
+    use_attn: True if using attention.
 
   Returns:
 
@@ -185,8 +163,11 @@ def evaluate(encoder, decoder, context, sentence, max_length=MAX_LENGTH):
 
   decoded_words = []
   for di in range(max_length):
-    ctx = context(encoder_hiddens, decoder_hidden)
-    decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden, ctx)
+    if use_attn:
+      ctx = context(encoder_hiddens, decoder_hidden)
+      decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden, ctx)
+    else:
+      decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden)
     topv, topi = decoder_output.data.topk(1)
     ni = topi[0][0]
     if ni == EOS_token:
@@ -200,21 +181,27 @@ def evaluate(encoder, decoder, context, sentence, max_length=MAX_LENGTH):
   return decoded_words
 
 
-def evaluateRandomly(encoder, decoder, context, n=10, filename='evaluation.txt'):
+def evaluateRandomly(encoder, decoder, context, pairs_test, input_lang, output_lang, n=10,
+                     filename='evaluation.txt', use_attn=True):
   """
   Evaluate randomly the unitest set.
   Args:
     encoder: The encoder.
     decoder: The decoder.
     context: The context calculator.
+    pairs_test: test sentence pairs.
+    input_lang: The input language.
+    output_lang: The output language.
     n: The total number of evaluation.
     filename: The file to store the evaluation.
+    use_attn: True if using attention.
+
   """
   for i in range(n):
     pair = random.choice(pairs_test)
     print('>', pair[0])
     print('=', pair[1])
-    output_words = evaluate(encoder, decoder, context, pair[0])
+    output_words = evaluate(encoder, decoder, context, pair[0], input_lang, output_lang, use_attn)
     output_sentence = ' '.join(output_words)
     print('<', output_sentence)
     print('')
@@ -227,6 +214,15 @@ def evaluateRandomly(encoder, decoder, context, n=10, filename='evaluation.txt')
 
 
 def main():
+
+  input_lang, output_lang, pairs_train, pairs_test = readLangs(
+    'data/en-vi/train.vi.txt',
+    'data/en-vi/tst2012.vi.txt',
+    'data/en-vi/train.en.txt',
+    'data/en-vi/tst2012.en.txt',
+  )
+  print(random.choice(pairs_train))
+
   hidden_size = 50
   encoder_hidden_size = hidden_size
   decoder_hidden_size = hidden_size
@@ -246,10 +242,15 @@ def main():
   # fileloc = '/output/'
   fileloc = './'
 
-  trainIters(encoder, decoder, context, n_iters=100000, print_every=100, plot_every=100, learning_rate=0.001,
-             filename=fileloc + 'bi' + str(bidirectional) + '_hidden' + str(hidden_size) + '_maxlen' + str(MAX_LENGTH) + '.txt')
+  trainIters(encoder, decoder, context, pairs_train, input_lang, output_lang,
+             n_iters=100000, print_every=100, plot_every=100, learning_rate=0.001,
+             filename=fileloc +
+             'bi' + str(bidirectional) +
+             '_hidden' + str(hidden_size) +
+             '_maxlen' + str(MAX_LENGTH) + '.txt')
 
-  evaluateRandomly(encoder, decoder, context, filename=fileloc + 'evaluation.txt')
+  evaluateRandomly(encoder, decoder, context, pairs_test, input_lang, output_lang,
+                   filename=fileloc + 'evaluation.txt', use_attn=False)
 
 
 if __name__ == '__main__':

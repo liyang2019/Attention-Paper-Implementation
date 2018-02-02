@@ -3,6 +3,9 @@ from io import open
 import unicodedata
 import re
 import random
+from torch.autograd import Variable
+import torch
+use_cuda = torch.cuda.is_available()
 
 
 SOS_token = 0  # the start of sentence token.
@@ -10,6 +13,7 @@ EOS_token = 1  # the end of sentence token.
 UNK_token = 2  # the unknown wod token.
 
 MAX_LENGTH = 10  # only sentence shorter than MAX_LENGTH we select to train.
+print('MAX_LENGTH', MAX_LENGTH)
 
 # only sentence with these prefix we select to train.
 eng_prefixes = (
@@ -132,6 +136,40 @@ def filterPairs(pairs):
   Returns: Filtered sentence pairs.
   """
   return [pair for pair in pairs if filterPair(pair)]
+
+
+def indexesFromSentence(lang, sentence):
+  indexes = []
+  for word in sentence.split(' '):
+    if word in lang.word2index:
+      indexes.append(lang.word2index[word])
+    else:
+      indexes.append(UNK_token)
+  return indexes
+
+
+def variableFromSentence(lang, sentence):
+  indexes = indexesFromSentence(lang, sentence)
+  # indexes.append(EOS_token)
+  result = Variable(torch.LongTensor(indexes).view(-1, 1))
+  result = result.cuda() if use_cuda else result
+  return result
+
+
+def variablesFromPair(input_lang, output_lang, pair):
+  """
+  Convert sentence pairs to variables.
+  Args:
+    input_lang: Input language.
+    output_lang: Output language.
+    pair: Sentence pairs.
+
+  Returns: Variables for the sentence pairs.
+
+  """
+  input_variable = variableFromSentence(input_lang, pair[0])
+  target_variable = variableFromSentence(output_lang, pair[1])
+  return input_variable, target_variable
 
 
 def main():

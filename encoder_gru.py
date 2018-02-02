@@ -1,5 +1,4 @@
 import torch.nn as nn
-from torch.autograd import Variable
 from prepare_data import *
 import torch
 use_cuda = torch.cuda.is_available()
