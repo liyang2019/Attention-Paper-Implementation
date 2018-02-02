@@ -110,11 +110,11 @@ def trainIters(encoder, decoder, context, pairs_train, input_lang, output_lang, 
   encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
   decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
   context_optimizer = optim.SGD(context.parameters(), lr=learning_rate)
-  training_pairs = [variablesFromPair(input_lang, output_lang, random.choice(pairs_train)) for _ in range(n_iters)]
+  training_pairs = [variablesFromPair(input_lang, output_lang, pairs_train[i]) for i in range(len(pairs_train))]
   criterion = nn.NLLLoss()
 
   for iter in range(1, n_iters + 1):
-    training_pair = training_pairs[iter - 1]
+    training_pair = training_pairs[(iter - 1) % len(training_pairs)]
     input_variable = training_pair[0]
     target_variable = training_pair[1]
 
@@ -239,18 +239,18 @@ def main():
     decoder = decoder.cuda()
     context = context.cuda()
 
-  # fileloc = '/output/'
-  fileloc = './'
+  fileloc = '/output/'
+  # fileloc = './'
 
   trainIters(encoder, decoder, context, pairs_train, input_lang, output_lang,
-             n_iters=100000, print_every=100, plot_every=100, learning_rate=0.001,
+             n_iters=10000, print_every=100, plot_every=100, learning_rate=0.01,
              filename=fileloc +
              'bi' + str(bidirectional) +
              '_hidden' + str(hidden_size) +
              '_maxlen' + str(MAX_LENGTH) + '.txt')
 
   evaluateRandomly(encoder, decoder, context, pairs_test, input_lang, output_lang,
-                   filename=fileloc + 'evaluation.txt', use_attn=False)
+                   filename=fileloc + 'evaluation.txt', use_attn=True)
 
 
 if __name__ == '__main__':

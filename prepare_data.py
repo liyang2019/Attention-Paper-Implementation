@@ -1,4 +1,5 @@
 from __future__ import unicode_literals, print_function, division
+import numpy as np
 from io import open
 import unicodedata
 import re
@@ -13,6 +14,7 @@ EOS_token = 1  # the end of sentence token.
 UNK_token = 2  # the unknown wod token.
 
 MAX_LENGTH = 10  # only sentence shorter than MAX_LENGTH we select to train.
+MAX_TRAIN = 2000  # max number of training examples.
 print('MAX_LENGTH', MAX_LENGTH)
 
 # only sentence with these prefix we select to train.
@@ -114,6 +116,11 @@ def readLangs(lang1_train, lang1_test, lang2_train, lang2_test):
   print("Counted words:")
   print('input   ' + lang1_train, input_lang.n_words)
   print('output  ' + lang2_train, output_lang.n_words)
+
+  # select only MAX_TRAIN training examples.
+  np.random.shuffle(pairs_train)
+  pairs_train = pairs_train[:MAX_TRAIN]
+  print('Training set selected to %s sentence pairs' % len(pairs_train))
 
   return input_lang, output_lang, pairs_train, pairs_test
 
